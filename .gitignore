@@ -1,0 +1,16 @@
+# Terraform state and locks
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfstate
+terraform/terraform.tfstate.backup
+terraform/*.tfvars
+
+# Generated SSH key (DO NOT COMMIT)
+*.pem
+
+# Generated Ansible inventory
+ansible/inventory.ini
+
+# OS junk
+.DS_Store
+Thumbs.db

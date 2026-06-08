@@ -1,0 +1,96 @@
+---
+- name: Configure Minecraft server on EC2
+  hosts: minecraft
+  become: true
+  gather_facts: true
+
+  vars:
+    minecraft_data_dir: /opt/minecraft/data
+    minecraft_image: itzg/minecraft-server:latest
+
+  tasks:
+    - name: Wait for cloud-init to finish before touching packages
+      ansible.builtin.command: cloud-init status --wait
+      changed_when: false
+      # cloud-init runs on first boot of Amazon Linux 2023 and holds the dnf
+      # lock briefly. Waiting here prevents race conditions on package install.
+
+    - name: Update all system packages
+      ansible.builtin.dnf:
+        name: "*"
+        state: latest
+        update_only: true
+
+    - name: Install Docker
+      ansible.builtin.dnf:
+        name: docker
+        state: present
+
+    - name: Enable and start Docker service
+      ansible.builtin.systemd:
+        name: docker
+        enabled: true
+        state: started
+
+    - name: Add ec2-user to docker group
+      ansible.builtin.user:
+        name: ec2-user
+        groups: docker
+        append: true
+
+    - name: Create Minecraft data directory for persistent world storage
+      ansible.builtin.file:
+        path: "{{ minecraft_data_dir }}"
+        state: directory
+        owner: ec2-user
+        group: ec2-user
+        mode: "0755"
+
+    - name: Pull Minecraft Docker image
+      community.docker.docker_image:
+        name: "{{ minecraft_image }}"
+        source: pull
+        force_source: true
+      # Fallback to the docker CLI if the community module isn't available.
+      # The deploy.sh wrapper installs ansible.community collections; if that
+      # ever breaks, swap this task to: ansible.builtin.command: docker pull {{ minecraft_image }}
+
+    - name: Install Minecraft systemd unit
+      ansible.builtin.copy:
+        src: files/minecraft.service
+        dest: /etc/systemd/system/minecraft.service
+        owner: root
+        group: root
+        mode: "0644"
+      notify:
+        - Reload systemd
+        - Restart Minecraft
+
+    - name: Enable and start Minecraft service
+      ansible.builtin.systemd:
+        name: minecraft
+        enabled: true
+        state: started
+        daemon_reload: true
+
+    - name: Wait for Minecraft port to be open
+      ansible.builtin.wait_for:
+        host: "{{ ansible_host | default(inventory_hostname) }}"
+        port: 25565
+        delay: 10
+        timeout: 300
+      delegate_to: localhost
+      become: false
+      # First-boot world generation takes 30-90 seconds. This task blocks until
+      # the server is actually accepting connections, so deploy.sh can finish
+      # confidently and nmap will succeed immediately after.
+
+  handlers:
+    - name: Reload systemd
+      ansible.builtin.systemd:
+        daemon_reload: true
+
+    - name: Restart Minecraft
+      ansible.builtin.systemd:
+        name: minecraft
+        state: restarted

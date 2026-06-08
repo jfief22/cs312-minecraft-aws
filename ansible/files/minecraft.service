@@ -1,0 +1,39 @@
+[Unit]
+Description=Minecraft Server (Docker, itzg/minecraft-server)
+Documentation=https://github.com/itzg/docker-minecraft-server
+Requires=docker.service
+After=docker.service network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+Restart=always
+RestartSec=10
+
+# TimeoutStopSec gives the container enough time to flush world data to disk
+# when systemd sends SIGTERM. The previous sysadmin's setup did not handle this,
+# which is why worlds were getting corrupted on reboot.
+TimeoutStopSec=120
+
+# Clean up any stale container before starting (idempotent restarts).
+ExecStartPre=-/usr/bin/docker rm -f minecraft
+
+# Run the container in the foreground so systemd can track its lifecycle.
+# --init ensures PID 1 reaps zombies properly inside the container.
+# Volume mount persists world data across container restarts and instance reboots.
+ExecStart=/usr/bin/docker run --rm --name minecraft \
+  --init \
+  -p 25565:25565 \
+  -e EULA=TRUE \
+  -e MEMORY=2G \
+  -e TYPE=VANILLA \
+  -v /opt/minecraft/data:/data \
+  itzg/minecraft-server
+
+# Graceful stop: send a "stop" command into the server console, then let
+# the container's own signal handling save chunks and shut down cleanly.
+# Falls back to docker stop (SIGTERM) if the rcon-cli command fails.
+ExecStop=/bin/sh -c '/usr/bin/docker exec minecraft rcon-cli stop || /usr/bin/docker stop -t 90 minecraft'
+
+[Install]
+WantedBy=multi-user.target
