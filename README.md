@@ -2,7 +2,7 @@
 
 Provisions and configures a Minecraft Java Edition server on AWS using Terraform and Ansible. The entire pipeline runs from a single command. No clicks in the AWS Management Console are required after credentials are configured.
 
-This repository is the Part 2 deliverable for CS312 (Systems Administration) at Oregon State University. It builds on the manual Part 1 setup by replacing every console click with infrastructure-as-code.
+This repository is the Part 2 deliverable for CS312. It builds on the manual Part 1 setup by replacing every console click with infrastructure-as-code.
 
 ## Background
 
@@ -139,15 +139,6 @@ minecraft_allowed_cidr = "0.0.0.0/0"
 
 To change the Minecraft version, edit `ansible/files/minecraft.service` and add a `-e VERSION=1.20.4` line to the `ExecStart`. The `itzg/minecraft-server` image supports many additional environment variables documented at its GitHub page.
 
-## Why this works around the assignment constraints
-
-The assignment prohibits four things in the final demo:
-
-- **No AWS Management Console.** Everything is Terraform and the AWS CLI under the hood. The only console visit is the Learner Lab module to copy credentials.
-- **No manual connections to AWS resources.** Ansible connects over SSH but it is automated, not interactive. The operator never opens an SSH session by hand during the demo.
-- **No SSH from the terminal.** Same as above. SSH is invoked by Ansible inside the script.
-- **No `user_data` field.** The EC2 resource in `main.tf` deliberately omits `user_data`. All configuration runs through Ansible after the instance is up.
-
 ## How the clean shutdown works
 
 The `minecraft.service` systemd unit defines an `ExecStop` directive:
@@ -180,8 +171,3 @@ The `STATE open` and the `SERVICE minecraft` line confirm both that the port is 
 - [Ansible community.docker collection](https://docs.ansible.com/ansible/latest/collections/community/docker/)
 - [systemd.service man page](https://www.freedesktop.org/software/systemd/man/systemd.service.html) — reference for `ExecStop` and `TimeoutStopSec`
 - [Amazon Linux 2023 user guide](https://docs.aws.amazon.com/linux/al2023/ug/what-is-amazon-linux.html)
-- CS312 course materials (Oregon State University) for the overall project structure and constraints
-
-## Extra credit claimed
-
-- **Docker image (+5 pts):** The Minecraft server runs as a container from the `itzg/minecraft-server` image rather than installing Java and the server jar directly on the host. This also enables the clean-shutdown behavior described above through the image's built-in signal handling.
