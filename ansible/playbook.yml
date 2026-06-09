@@ -64,7 +64,6 @@
         mode: "0644"
       notify:
         - Reload systemd
-        - Restart Minecraft
 
     - name: Enable and start Minecraft service
       ansible.builtin.systemd:
