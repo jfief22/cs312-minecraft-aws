@@ -7,7 +7,7 @@ variable "aws_region" {
 variable "project_name" {
   description = "Tag/name prefix applied to all resources."
   type        = string
-  default     = "minecraft"
+  default     = "minecraft-p2"
 }
 
 variable "instance_type" {
@@ -37,5 +37,5 @@ variable "minecraft_allowed_cidr" {
 variable "key_name" {
   description = "Name of the SSH key pair to create in AWS."
   type        = string
-  default     = "minecraft-key"
+  default     = "minecraft-part2-key"
 }
