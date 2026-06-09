@@ -75,7 +75,7 @@
 
     - name: Wait for Minecraft port to be open
       ansible.builtin.wait_for:
-        host: 127.0.0.1
+        host: "{{ inventory_hostname }}"
         port: 25565
         delay: 10
         timeout: 300
